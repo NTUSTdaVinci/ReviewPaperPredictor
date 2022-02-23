@@ -5,6 +5,7 @@ import threading
 from tkinter import filedialog
 
 from keras.models import load_model, Sequential
+from keyword_calculator import KeywordCalculator
 
 import numpy as np
 import pandas as pd
@@ -142,34 +143,9 @@ def run_ai_model(file_path, model_path, wb_path, save_dir, ti_name, ab_name):
     msg_IO("Calculating keyword in training data.\n")
     print("Calculating keyword in training data ...")
     # this loop travels every title and abstract of each paper for keywords calculation
-    for ti_sentence, ab_sentence in zip(train[ti_name].values, train[ab_name].values):
-        ti_list = []
-        ab_list = []
-        # calculate the number of each keyword in title and abstract
-        # save the result in ti_list and ab_list
-        for word_list in wbList:
-            word_counter_ti = 0
-            word_counter_ab = 0
-            for word in word_list:
-                if pd.isna(word):
-                    break
-                word_counter_ti += len(re.findall(word.lower(), str(ti_sentence).lower(), re.IGNORECASE))
-                word_counter_ab += len(re.findall(word.lower(), str(ab_sentence).lower(), re.IGNORECASE))
-            ti_list.append(word_counter_ti)
-            ab_list.append(word_counter_ab)
+    keyword_counter = KeywordCalculator(train[ti_name].values, train[ab_name].values, df_wb)
+    input_data = keyword_counter.get_result()
 
-        # combine the data stream from title and abstract
-        sentence_list = ti_list + ab_list
-
-        ti_list.clear()
-        ab_list.clear()
-
-        input.append(sentence_list)
-        input_counter += 1
-
-    input_data = np.array(input)
-
-    model = Sequential()
     msg_IO("Loading model...\n")
     model = load_model(model_path)
 
@@ -178,10 +154,7 @@ def run_ai_model(file_path, model_path, wb_path, save_dir, ti_name, ab_name):
 
     msg_IO("Saving output files...\n")
 
-    col = np.append(df_wb['keyword'], df_wb['keyword'])
-    print(len(col))
-    df_word = pd.DataFrame(input, columns=col)
-    df_word.to_excel(save_dir + "/keywords statistics.xlsx")
+    keyword_counter.save_statistics(save_dir)
 
     col_name = train.columns.tolist()
     col_name.insert(0, 'Possibility of Review Paper')

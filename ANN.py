@@ -19,6 +19,8 @@ import os
 import re
 import sys
 
+from keyword_calculator import KeywordCalculator
+
 import concurrent.futures
 import logging
 import matplotlib.pyplot as plt
@@ -28,6 +30,7 @@ from threading import Thread
 MAX_LENGTH = 450
 NUM_EMBEDDING_DIM = 100
 NUM_LSTM_UNITS = 96
+NUM_EPOCHS = 5
 TEXT_LINE_NO = 1
 
 HISTORY_FLAG = False
@@ -66,12 +69,13 @@ class CustomCallback(callbacks.Callback):
         self.epoch = 1
         self.batch = 0
         self.epoch_time_start = 0
+        self.epoch_max = NUM_EPOCHS
 
     def on_epoch_begin(self, epoch, logs=None):
         self.epoch = epoch
         self.epoch_time_start = time.time()
         epoch_counter = epoch + 1
-        msg_IO('== Epoch {}/10 ==\n'.format(epoch_counter))
+        msg_IO('== Epoch {counter}/{ep_max} ==\n'.format(counter=epoch_counter, ep_max=self.epoch_max))
 
     def on_epoch_end(self, epoch, logs=None):
         msg_IO(' - time: {:7.0f}s\n'.format(time.time() - self.epoch_time_start))
@@ -212,33 +216,8 @@ def build_ai(filePath, ti_name, ab_name, label_name, save_dir, wb_path):
     print("Calculating keywords in training data ...")
 
     # this loop travels every title and abstract of each paper for keywords calculation
-    for ti_sentence, ab_sentence in zip(train[ti_name].values, train[ab_name].values):
-        ti_list = []
-        ab_list = []
-        # calculate the number of each keyword in title and abstract
-        # save the result in ti_list and ab_list
-        for word_list in wbList:
-            word_counter_ti = 0
-            word_counter_ab = 0
-            for word in word_list:
-                if pd.isna(word):
-                    break
-                word_counter_ti += len(re.findall(word.lower(), str(ti_sentence).lower(), re.IGNORECASE))
-                word_counter_ab += len(re.findall(word.lower(), str(ab_sentence).lower(), re.IGNORECASE))
-            ti_list.append(word_counter_ti)
-            ab_list.append(word_counter_ab)
-
-        # combine the data stream from title and abstract
-        sentence_list = ti_list + ab_list
-
-        ti_list.clear()
-        ab_list.clear()
-
-        # save the result of each keyword calculation in one list(as training input)
-        input.append(sentence_list)
-        input_counter += 1
-
-    input_data = np.array(input)
+    keyword_counter = KeywordCalculator(train[ti_name].values, train[ab_name].values, df_wb)
+    input_data = keyword_counter.get_result()
 
     msg_IO('Read ' + str(len(train[ti_name])) + ' data \n')
 
@@ -255,10 +234,10 @@ def build_ai(filePath, ti_name, ab_name, label_name, save_dir, wb_path):
     print(input[5])
     print(merger_train[5])
 
-    # create and set-up model
+    # create and setup model
     model = Sequential()
 
-    # set-up layers
+    # setup layers
     if len(df_wb['keyword']) > 50:
         print("layer50")
         model.add(layers.Dense(256, activation='relu'))
@@ -285,10 +264,7 @@ def build_ai(filePath, ti_name, ab_name, label_name, save_dir, wb_path):
 
     msg_IO("Saving output files...\n")
     # save the keywords statistics result in output folder
-    col = np.append(df_wb['keyword'], df_wb['keyword'])
-    print(len(col))
-    df_word = pd.DataFrame(input, columns=col)
-    df_word.to_excel(save_dir + "/keywords statistics.xlsx")
+    keyword_counter.save_statistics(save_dir)
 
     # save model in output folder
     model.save(save_dir + '/model.h5')
