@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets, uic
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import QFileDialog, QDesktopWidget
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from ui.ui_main import Ui_MainWindow
+from process import Process_Window
 from ann.builder import BuildingTask
 from ann.predictor import PredictionTask
 
@@ -24,6 +25,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+
+        #process window
+        self.processWindow = Process_Window()
 
     def setup_ui(self):
         self.ui.checkBox.stateChanged.connect(self.onCheckBoxClick)
@@ -71,10 +75,16 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.bu_qthread = BuildingTask(input_path, wb_path, output_path,
                                                ti_col, ab_col, label_col)
                 self.bu_qthread.qthread_signal.connect(self.progress_changed)
+                self.bu_qthread.reading_signal.connect(self.reading_data)
+                self.bu_qthread.data_signal.connect(self.obtain_data)
+                self.bu_qthread.keyword_signal.connect(self.keyword_data)
+                self.bu_qthread.ai_signal.connect(self.ai_data)
+                self.bu_qthread.saving_signal.connect(self.saving_data)
                 self.bu_qthread.finished.connect(self.bu_finished)
                 self.bu_qthread.start()
                 self.ui.bu_exeButton.setEnabled(False)
                 self.ui.checkBox.setEnabled(False)
+                self.processWindow.show()
             # if one of files doesn't exist, output error msg
             else:
                 print("Files or directory do not exist.")
@@ -125,7 +135,23 @@ class MainWindow(QtWidgets.QMainWindow):
     def progress_changed(self, text):
         print(text)
 
+    def reading_data(self):
+        self.processWindow.read_label_color_change()
+
+    def obtain_data(self, num):
+        self.processWindow.data_label_change(num)
+
+    def keyword_data(self):
+        self.processWindow.keyword_label_color_change()
+
+    def ai_data(self):
+        self.processWindow.ai_label_color_change()
+
+    def saving_data(self):
+        self.processWindow.saving_label_color_change()
+
     def bu_finished(self):
+        self.processWindow.finished_label_color_change()
         self.ui.bu_exeButton.setEnabled(True)
         self.ui.checkBox.setEnabled(True)
 

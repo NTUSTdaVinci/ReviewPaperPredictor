@@ -6,7 +6,7 @@ import pandas as pd
 
 from keras.models import load_model, Sequential
 
-from keyword_calculator import KeywordCalculator
+from ann.keyword_calculator import KeywordCalculator
 
 import matplotlib.pyplot as plt
 

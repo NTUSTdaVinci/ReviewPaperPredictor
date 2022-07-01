@@ -1,0 +1,6 @@
+E:/PycharmProjects/pythonProject/ReviewPaperAI/trainingData/Review 3500.xlsx
+E:/PycharmProjects/pythonProject/ReviewPaperAI/trainingData/word_bank_test.xlsx
+E:/Deep learning in NLP/output/20220228
+TI
+AB
+PT

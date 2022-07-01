@@ -16,7 +16,8 @@ import scipy
 from keras.models import Sequential
 from keras import callbacks, layers
 
-from keyword_calculator import KeywordCalculator
+from ann.keyword_calculator import KeywordCalculator
+
 
 import matplotlib.pyplot as plt
 
@@ -49,6 +50,11 @@ class CustomCallback(callbacks.Callback):
 
 class BuildingTask(QThread):
     qthread_signal = pyqtSignal(str)
+    reading_signal = pyqtSignal()
+    data_signal = pyqtSignal(int)
+    keyword_signal = pyqtSignal()
+    ai_signal = pyqtSignal()
+    saving_signal = pyqtSignal()
     finished = pyqtSignal()
 
     def __init__(self, ip, wp, op, tc, ac, lc):
@@ -62,6 +68,7 @@ class BuildingTask(QThread):
 
     def run(self):
         # read training data from input file: title, abstract, label
+        self.reading_signal.emit()
         train = pd.read_excel(self.input_path, usecols=[self.ti_col, self.ab_col, self.label_col])
         print(self.ti_col+", "+self.ab_col+", "+self.label_col+"\n")
         print(train[self.ti_col])
@@ -70,16 +77,17 @@ class BuildingTask(QThread):
         train[self.ab_col] = train[self.ab_col].astype(str)
 
         print("Obtain " + str(len(train[self.ti_col])) + " data\n")
-        self.qthread_signal.emit("Obtain " + str(len(train[self.ti_col])) + " data\n")
+        self.data_signal.emit(len(train[self.ti_col]))
 
         # read word bank
         df_wb = pd.read_excel(self.wb_path)
 
         print("'wbList'")
+        self.keyword_signal.emit()
         keyword_counter = KeywordCalculator(train[self.ti_col].values, train[self.ab_col].values, df_wb)
         input_data = keyword_counter.get_result()
-        self.qthread_signal.emit("Finish keyword count\n")
 
+        self.ai_signal.emit()
         # spilt keywords statistics into training(75%) and testing(25%) data
         merger_train, merger_val, \
         y_train, y_val \
@@ -120,6 +128,7 @@ class BuildingTask(QThread):
         self.qthread_signal.emit("Finish AI model training\n")
         model.summary()
 
+        self.saving_signal.emit()
         self.qthread_signal.emit("Saving output files...\n")
         # save the keywords statistics result in output folder
         keyword_counter.save_statistics(self.output_path)

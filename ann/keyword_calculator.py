@@ -3,7 +3,7 @@ import pandas as pd
 import re
 
 
-class KeywordCalculator:
+class KeywordCalculator():
 
     def __init__(self, ti, ab, wb):
         self.title_article = ti
